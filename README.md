@@ -84,7 +84,6 @@ npx hardhat accounts
 ### **Step 1: Initialize Next.js**  
 Create a new Next.js project:  
 ```bash
-npx create-next-app@latest frontend
 cd frontend
 npm install ethers
 ```
