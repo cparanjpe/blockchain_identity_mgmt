@@ -3,12 +3,25 @@
 import { useState } from "react";
 import { ethers } from "ethers";
 
-const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Your deployed contract address
+const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Your deployed contract address
 const contractABI = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "approver",
+        "type": "address"
+      }
+    ],
+    "name": "ApproverAdded",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -43,6 +56,19 @@ const contractABI = [
     "type": "event"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_approver",
+        "type": "address"
+      }
+    ],
+    "name": "addApprover",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "admin",
     "outputs": [
@@ -50,6 +76,25 @@ const contractABI = [
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "approvers",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -171,8 +216,8 @@ export default function Home() {
   const [dob, setDob] = useState("");
   const [identity, setIdentity] = useState(null);
   const [verifyAddress, setVerifyAddress] = useState("");
-  const [thirdPartyAddress, setThirdPartyAddress] = useState("");
   const [thirdPartyVerifyAddress, setThirdPartyVerifyAddress] = useState("");
+  const [approverAddress, setApproverAddress] = useState("");
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -265,11 +310,33 @@ export default function Home() {
 
       // Call the smart contract function to allow third-party verification
       const isVerified = await contract.isIdentityVerified(thirdPartyVerifyAddress);
+      console.log(isVerified)
 
-      alert("Third-party verification successful!");
+      alert("Third-party verification successful! Verification status : " + isVerified);
     } catch (error) {
       console.error("Error in third-party verification:", error);
       alert("Verification failed!");
+    }
+  };
+
+  const addApprover = async () => {
+    if (!account) {
+      alert("Connect wallet first!");
+      return;
+    }
+  
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner(account);
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+  
+      const tx = await contract.addApprover(approverAddress);
+      await tx.wait();
+  
+      alert("Approver added successfully!");
+    } catch (error) {
+      console.error("Error adding approver:", error);
+      alert("Failed to add approver!");
     }
   };
 
@@ -335,6 +402,21 @@ export default function Home() {
           Verify Identity
         </button>
       </div>
+
+      <div className="mt-6">
+        <h2 className="text-xl font-bold">Add Approver</h2>
+        <input
+          type="text"
+          placeholder="Approver Address"
+          value={approverAddress}
+          onChange={(e) => setApproverAddress(e.target.value)}
+          className="border px-4 py-2 rounded mr-2"
+        />
+        <button onClick={addApprover} className="bg-blue-500 text-white px-4 py-2 rounded">
+          Add Approver
+        </button>
+      </div>
+
 
       <div className="mt-6">
         <h2 className="text-xl font-bold">Third-Party Verification</h2>

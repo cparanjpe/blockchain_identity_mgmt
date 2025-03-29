@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 contract IdentityManager {
     address public admin;
+    mapping(address => bool) public approvers;
 
     struct Identity {
         string name;
@@ -14,14 +15,20 @@ contract IdentityManager {
 
     event IdentityCreated(address indexed user, string name);
     event IdentityVerified(address indexed user);
+    event ApproverAdded(address indexed approver);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can verify identities");
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
+    }
+
+    modifier onlyApprover() {
+        require(msg.sender == admin || approvers[msg.sender], "Not an admin or approver");
         _;
     }
 
     constructor() {
-        admin = msg.sender; // Deployer's address is admin
+        admin = msg.sender; // Deployer is admin
     }
 
     function createIdentity(string memory _name, string memory _dob) external {
@@ -30,10 +37,16 @@ contract IdentityManager {
         emit IdentityCreated(msg.sender, _name);
     }
 
-    function verifyIdentity(address _user) external onlyAdmin {
+    function verifyIdentity(address _user) external onlyApprover {
         require(bytes(identities[_user].name).length > 0, "Identity does not exist!");
         identities[_user].verified = true;
         emit IdentityVerified(_user);
+    }
+
+    function addApprover(address _approver) external onlyAdmin {
+        require(!approvers[_approver], "Already an approver!");
+        approvers[_approver] = true;
+        emit ApproverAdded(_approver);
     }
 
     function getIdentity(address _user) external view returns (string memory, string memory, bool) {
@@ -42,7 +55,6 @@ contract IdentityManager {
         return (id.name, id.dob, id.verified);
     }
 
-    // **New Function: Publicly Check Verification Status**
     function isIdentityVerified(address _user) external view returns (bool) {
         return identities[_user].verified;
     }
