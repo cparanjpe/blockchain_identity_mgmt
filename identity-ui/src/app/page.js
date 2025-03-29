@@ -106,6 +106,54 @@ const contractABI = [
     "inputs": [
       {
         "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "identities",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "dob",
+        "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "verified",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      }
+    ],
+    "name": "isIdentityVerified",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_user",
         "type": "address"
       }
@@ -123,6 +171,8 @@ export default function Home() {
   const [dob, setDob] = useState("");
   const [identity, setIdentity] = useState(null);
   const [verifyAddress, setVerifyAddress] = useState("");
+  const [thirdPartyAddress, setThirdPartyAddress] = useState("");
+  const [thirdPartyVerifyAddress, setThirdPartyVerifyAddress] = useState("");
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -202,6 +252,27 @@ export default function Home() {
     }
   };
 
+  const thirdPartyVerifyIdentity = async () => {
+    if (!account) {
+      alert("Connect wallet first!");
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner(account);
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+      // Call the smart contract function to allow third-party verification
+      const isVerified = await contract.isIdentityVerified(thirdPartyVerifyAddress);
+
+      alert("Third-party verification successful!");
+    } catch (error) {
+      console.error("Error in third-party verification:", error);
+      alert("Verification failed!");
+    }
+  };
+
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-8">
       <h1 className="text-2xl font-bold mb-4">Blockchain Identity Manager</h1>
@@ -264,6 +335,21 @@ export default function Home() {
           Verify Identity
         </button>
       </div>
+
+      <div className="mt-6">
+        <h2 className="text-xl font-bold">Third-Party Verification</h2>
+        <input
+          type="text"
+          placeholder="User Address to Verify"
+          value={thirdPartyVerifyAddress}
+          onChange={(e) => setThirdPartyVerifyAddress(e.target.value)}
+          className="border px-4 py-2 rounded mr-2"
+        />
+        <button onClick={thirdPartyVerifyIdentity} className="bg-purple-500 text-white px-4 py-2 rounded">
+          Third-Party Verify
+        </button>
+      </div>  
+      
     </main>
   );
 }

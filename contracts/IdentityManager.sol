@@ -41,4 +41,9 @@ contract IdentityManager {
         Identity memory id = identities[_user];
         return (id.name, id.dob, id.verified);
     }
+
+    // **New Function: Publicly Check Verification Status**
+    function isIdentityVerified(address _user) external view returns (bool) {
+        return identities[_user].verified;
+    }
 }
