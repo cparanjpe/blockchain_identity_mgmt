@@ -1,10 +1,10 @@
 "use client";
-
+import lighthouse from "@lighthouse-web3/sdk";
 import { useState } from "react";
 import { ethers } from "ethers";
 
-const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Your deployed contract address
-const contractABI = [
+const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Your deployed contract address
+const contractABI =  [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -111,6 +111,11 @@ const contractABI = [
         "internalType": "string",
         "name": "_dob",
         "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_documentURI",
+        "type": "string"
       }
     ],
     "name": "createIdentity",
@@ -128,6 +133,11 @@ const contractABI = [
     ],
     "name": "getIdentity",
     "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      },
       {
         "internalType": "string",
         "name": "",
@@ -165,6 +175,11 @@ const contractABI = [
       {
         "internalType": "string",
         "name": "dob",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "documentURI",
         "type": "string"
       },
       {
@@ -210,6 +225,8 @@ const contractABI = [
   }
 ];
 
+const LIGHTHOUSE_API_KEY = "837e5b84.eef749b067ef4c25b43a2a6601d542a4"
+
 export default function Home() {
   const [account, setAccount] = useState(null);
   const [name, setName] = useState("");
@@ -218,6 +235,49 @@ export default function Home() {
   const [verifyAddress, setVerifyAddress] = useState("");
   const [thirdPartyVerifyAddress, setThirdPartyVerifyAddress] = useState("");
   const [approverAddress, setApproverAddress] = useState("");
+  const [file, setFile] = useState(null);
+  const [userToVerifyData, setUserToVerifyData] = useState(null);
+
+  const fetchUserIdentity = async (address) => {
+    if (!account) {
+      alert("Connect wallet first!");
+      return;
+    }
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner(account);
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+  
+      const data = await contract.getIdentity(address);
+      setUserToVerifyData({
+        name: data[0],
+        dob: data[1],
+        documentURI: data[2],
+        isVerified: data[3],
+      });
+    } catch (err) {
+      console.error("Error fetching user identity:", err);
+      alert("User identity not found!");
+      setUserToVerifyData(null);
+    }
+  };
+  
+
+  const handleFileUpload = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+
+  const uploadToLighthouse = async (file) => {
+    try {
+      const response = await lighthouse.upload([file], LIGHTHOUSE_API_KEY);
+      const cid = response.data.Hash;
+      return `https://gateway.lighthouse.storage/ipfs/${cid}`;
+    } catch (err) {
+      console.error("Lighthouse upload error:", err);
+      return null;
+    }
+  };
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -242,12 +302,18 @@ export default function Home() {
     }
 
     try {
+
+      const documentURI = await uploadToLighthouse(file);
+      if (!documentURI) {
+        alert("File upload failed");
+        return;
+      }
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner(account);
       const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
       // Passing both name and dob
-      const tx = await contract.createIdentity(name, dob);
+      const tx = await contract.createIdentity(name, dob,documentURI);
       await tx.wait();
 
       alert("Identity created successfully!");
@@ -268,7 +334,7 @@ export default function Home() {
       const contract = new ethers.Contract(contractAddress, contractABI, provider);
 
       const data = await contract.getIdentity(account);
-      setIdentity({ name: data[0], dob: data[1], isVerified: data[2] });
+      setIdentity({ name: data[0], dob: data[1],documentURI: data[2], isVerified: data[3] });
     } catch (error) {
       console.error("Error fetching identity:", error);
       alert("Identity not found!");
@@ -368,6 +434,8 @@ export default function Home() {
           onChange={(e) => setDob(e.target.value)}
           className="border px-4 py-2 rounded mr-2"
         />
+        <input type="file" onChange={handleFileUpload} className="border px-4 py-2 rounded mr-2" />
+
         <button onClick={createIdentity} className="bg-green-500 text-white px-4 py-2 rounded">
           Create Identity
         </button>
@@ -384,6 +452,7 @@ export default function Home() {
             <p><strong>Name:</strong> {identity.name}</p>
             <p><strong>DOB:</strong> {identity.dob}</p>
             <p><strong>Verification Status:</strong> {identity.isVerified ? "✅ Verified" : "❌ Not Verified"}</p>
+            <p><strong>Document:</strong> <a href={identity.documentURI} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View Document</a></p>
           </div>
         )}
       </div>
@@ -398,6 +467,44 @@ export default function Home() {
           onChange={(e) => setVerifyAddress(e.target.value)}
           className="border px-4 py-2 rounded mr-2"
         />
+        <button onClick={() => fetchUserIdentity(verifyAddress)} className="bg-gray-500 text-white px-4 py-2 rounded">
+  Fetch Identity
+</button>
+
+{userToVerifyData && (
+  <div className="mt-4 w-full max-w-md bg-white shadow-lg rounded-lg p-6 border border-gray-200">
+    <h3 className="text-lg font-semibold mb-4 text-gray-800">User Identity Details</h3>
+    <div className="space-y-2 text-sm text-gray-700">
+      <p>
+        <span className="font-medium">Name:</span> {userToVerifyData.name}
+      </p>
+      <p>
+        <span className="font-medium">DOB:</span> {userToVerifyData.dob}
+      </p>
+      <p>
+        <span className="font-medium">Verification Status:</span>{" "}
+        {userToVerifyData.isVerified ? (
+          <span className="text-green-600 font-semibold">✅ Verified</span>
+        ) : (
+          <span className="text-red-600 font-semibold">❌ Not Verified</span>
+        )}
+      </p>
+      <p>
+        <span className="font-medium">Document:</span>{" "}
+        <a
+          href={userToVerifyData.documentURI}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 underline hover:text-blue-800"
+        >
+          View Document
+        </a>
+      </p>
+    </div>
+  </div>
+)}
+
+
         <button onClick={verifyIdentity} className="bg-red-500 text-white px-4 py-2 rounded">
           Verify Identity
         </button>

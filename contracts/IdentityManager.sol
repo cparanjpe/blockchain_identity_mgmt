@@ -4,12 +4,15 @@ pragma solidity ^0.8.20;
 contract IdentityManager {
     address public admin;
     mapping(address => bool) public approvers;
+    uint private _nonce = block.timestamp; 
 
     struct Identity {
         string name;
         string dob;
+        string documentURI;
         bool verified;
     }
+    
 
     mapping(address => Identity) public identities;
 
@@ -31,9 +34,9 @@ contract IdentityManager {
         admin = msg.sender; // Deployer is admin
     }
 
-    function createIdentity(string memory _name, string memory _dob) external {
+    function createIdentity(string memory _name, string memory _dob,string memory _documentURI) external {
         require(bytes(identities[msg.sender].name).length == 0, "Identity already exists!");
-        identities[msg.sender] = Identity(_name, _dob, false);
+        identities[msg.sender] = Identity(_name, _dob, _documentURI, false);
         emit IdentityCreated(msg.sender, _name);
     }
 
@@ -49,10 +52,14 @@ contract IdentityManager {
         emit ApproverAdded(_approver);
     }
 
-    function getIdentity(address _user) external view returns (string memory, string memory, bool) {
+    function getIdentity(address _user) external view returns (string memory, string memory, string memory, bool) {
+        require(
+        msg.sender == _user || msg.sender == admin || approvers[msg.sender],
+        "Not authorized to view this identity"
+        );
         require(bytes(identities[_user].name).length > 0, "Identity does not exist!");
         Identity memory id = identities[_user];
-        return (id.name, id.dob, id.verified);
+        return (id.name, id.dob, id.documentURI, id.verified);
     }
 
     function isIdentityVerified(address _user) external view returns (bool) {
