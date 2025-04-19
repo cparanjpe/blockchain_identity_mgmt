@@ -3,6 +3,7 @@
 This project is a **blockchain-based identity verification system** using **Solidity, Hardhat, and MetaMask**. The system allows users to register their identity and an **admin** to verify them.
 
 ---
+THIS DETAILS HOW TO INIT A BASIC PROJ. IF YOU WANT TO CLONE AND RUN PLEASE START FROM STEP-2
 
 ## **1️⃣ Prerequisites**  
 Ensure the following are installed:  
